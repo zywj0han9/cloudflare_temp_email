@@ -280,6 +280,7 @@ export function newTelegramBot(c: Context<HonoCustomType>, token: string): Teleg
             + `/lang zh - 中文\n`
             + `/lang en - English`
         );
+    });
 
 			bot.command("bindtopic", async (ctx: TgContext) => {
 			    const msgs = await getTgMessages(c, ctx);
@@ -322,8 +323,7 @@ export function newTelegramBot(c: Context<HonoCustomType>, token: string): Teleg
 			        return await ctx.reply(`${msgs.TgBindFailedMsg} ${(e as Error).message}`);
 			    }
 			});
-    });
-
+	
     const queryMail = async (ctx: TgContext, queryAddress: string, mailIndex: number, edit: boolean) => {
         const msgs = await getTgMessages(c, ctx);
         const userId = ctx?.message?.from?.id || ctx.callbackQuery?.message?.chat?.id;
