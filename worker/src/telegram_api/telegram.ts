@@ -466,29 +466,39 @@ const parseMail = async (
     }
 }
 
-
 export async function sendMailToTelegram(
-    c: Context<HonoCustomType>, address: string,
+    c: Context<HonoCustomType>, 
+    address: string,
     parsedEmailContext: ParsedEmailContext,
     message_id: string | null
 ) {
     if (!c.env.TELEGRAM_BOT_TOKEN || !c.env.KV) {
         return;
     }
-    const userId = await c.env.KV.get(`${CONSTANTS.TG_KV_PREFIX}:${address}`);
+    
+    // 获取绑定信息(可能是字符串 userId 或 JSON 对象)
+    const bindInfoStr = await c.env.KV.get(`${CONSTANTS.TG_KV_PREFIX}:${address}`);
     const settings = await c.env.KV.get<TelegramSettings>(CONSTANTS.TG_KV_SETTINGS_KEY, "json");
     const globalPush = settings?.enableGlobalMailPush && settings?.globalMailPushList;
-    if (!userId && !globalPush) {
+    
+    if (!bindInfoStr && !globalPush) {
         return;
     }
+    
     const mailId = await c.env.DB.prepare(
         `SELECT id FROM raw_mails where address = ? and message_id = ?`
     ).bind(address, message_id).first<string>("id");
     const bot = newTelegramBot(c, c.env.TELEGRAM_BOT_TOKEN);
 
-    const buildAndSend = async (targetUserId: string, msgs: LocaleMessages) => {
+    const buildAndSend = async (
+        targetUserId: string, 
+        msgs: LocaleMessages,
+        targetChatId?: number,
+        targetThreadId?: number
+    ) => {
         const { mail } = await parseMail(msgs, parsedEmailContext, address, new Date().toUTCString());
         if (!mail) return;
+        
         const buttons = [];
         if (settings?.miniAppUrl && mailId) {
             const url = new URL(settings.miniAppUrl);
@@ -496,9 +506,19 @@ export async function sendMailToTelegram(
             url.searchParams.set("mail_id", mailId);
             buttons.push(Markup.button.webApp(msgs.TgViewMailBtnMsg, url.toString()));
         }
-        await bot.telegram.sendMessage(targetUserId, mail, {
+        
+        // 发送到指定聊天或用户
+        const sendTo = targetChatId || targetUserId;
+        const options: any = {
             ...Markup.inlineKeyboard([...buttons])
-        });
+        };
+        
+        // 如果有话题 ID,添加到选项中
+        if (targetThreadId) {
+            options.message_thread_id = targetThreadId;
+        }
+        
+        await bot.telegram.sendMessage(sendTo, mail, options);
     };
 
     if (globalPush) {
@@ -508,8 +528,25 @@ export async function sendMailToTelegram(
         }
     }
 
-    if (userId) {
+    if (bindInfoStr) {
+        // 尝试解析为 JSON,如果失败则视为旧格式(纯字符串 userId)
+        let bindInfo: any;
+        try {
+            bindInfo = JSON.parse(bindInfoStr);
+        } catch {
+            // 旧格式:纯字符串 userId
+            bindInfo = { userId: bindInfoStr };
+        }
+        
+        const userId = bindInfo.userId || bindInfoStr;
         const userMsgs = await getTgMessages(c, undefined, userId);
-        await buildAndSend(userId, userMsgs);
+        
+        await buildAndSend(
+            userId,
+            userMsgs,
+            bindInfo.chatId,
+            bindInfo.threadId
+        );
     }
+}
 }
