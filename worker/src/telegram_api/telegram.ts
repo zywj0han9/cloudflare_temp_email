@@ -89,31 +89,44 @@ export function newTelegramBot(c: Context<HonoCustomType>, token: string): Teleg
     }
 
     bot.use(async (ctx, next) => {
-        // check if in private chat
-        if (ctx.chat?.type !== "private") {
-            return;
-        }
-
-        const userId = ctx?.message?.from?.id || ctx.callbackQuery?.message?.chat?.id;
-        if (!userId) {
-            const msgs = await getTgMessages(c, ctx);
-            return await ctx.reply(msgs.TgUnableGetUserInfoMsg);
-        }
-
-        const settings = await c.env.KV.get<TelegramSettings>(CONSTANTS.TG_KV_SETTINGS_KEY, "json");
-        if (settings?.enableAllowList
-            && !settings.allowList.includes(userId.toString())
-        ) {
-            const msgs = await getTgMessages(c, ctx);
-            return await ctx.reply(msgs.TgNoPermissionMsg);
-        }
-        try {
-            await next();
-        } catch (error) {
-            console.error(`Error: ${error}`);
-            return await ctx.reply(`Error: ${error}`);
-        }
-    })
+		    const isPrivate = ctx.chat?.type === "private";
+		    const isSupergroup = ctx.chat?.type === "supergroup";
+		    const isGroup = ctx.chat?.type === "group";
+		    
+		    // 获取命令名称
+		    const messageText = ctx?.message?.text || "";
+		    const command = messageText.split(" ")[0].toLowerCase();
+		    
+		    // 允许在话题中使用的命令列表
+		    const topicAllowedCommands = ["/bindtopic"];
+		    
+		    // 如果不是私聊,检查是否是允许的命令
+		    if (!isPrivate) {
+		        if (!topicAllowedCommands.includes(command)) {
+		            return; // 其他命令在群组/话题中不响应
+		        }
+		    }
+		
+		    const userId = ctx?.message?.from?.id || ctx.callbackQuery?.message?.chat?.id;
+		    if (!userId) {
+		        const msgs = await getTgMessages(c, ctx);
+		        return await ctx.reply(msgs.TgUnableGetUserInfoMsg);
+		    }
+		
+		    const settings = await c.env.KV.get<TelegramSettings>(CONSTANTS.TG_KV_SETTINGS_KEY, "json");
+		    if (settings?.enableAllowList
+		        && !settings.allowList.includes(userId.toString())
+		    ) {
+		        const msgs = await getTgMessages(c, ctx);
+		        return await ctx.reply(msgs.TgNoPermissionMsg);
+		    }
+		    try {
+		        await next();
+		    } catch (error) {
+		        console.error(`Error: ${error}`);
+		        return await ctx.reply(`Error: ${error}`);
+		    }
+		})
 
     bot.command("start", async (ctx: TgContext) => {
         const msgs = await getTgMessages(c, ctx);
