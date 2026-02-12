@@ -294,48 +294,54 @@ export function newTelegramBot(c: Context<HonoCustomType>, token: string): Teleg
             + `/lang en - English`
         );
     });
+		bot.command("bindtopic", async (ctx: TgContext) => {
+		    const msgs = await getTgMessages(c, ctx);
+		    const userId = ctx?.message?.from?.id;
+		    const chatId = ctx?.message?.chat?.id;
+		    const threadId = ctx?.message?.message_thread_id;
+		    
+		    if (!userId) {
+		        return await ctx.reply(msgs.TgUnableGetUserInfoMsg);
+		    }
+		    
+		    // 检查是否在话题中
+		    if (!threadId) {
+		        return await ctx.reply("⚠️ 请在超级群组的话题中使用此命令!");
+		    }
+		    
+		    try {
+		        // 修复:应该是 "/bindtopic" 不是 "/bind"
+		        const jwt = ctx?.message?.text.slice("/bindtopic".length).trim();
+		        
+		        if (!jwt) {
+		            return await ctx.reply(msgs.TgPleaseInputCredentialMsg + "\n\n使用方法: /bindtopic <邮箱凭证>");
+		        }
+		        
+		        const address = await bindTelegramAddress(c, userId.toString(), jwt, msgs);
+		        
+		        // 保存绑定信息到 address 键(用于接收邮件)
+		        await c.env.KV.put(
+		            `${CONSTANTS.TG_KV_PREFIX}:${address}`,
+		            JSON.stringify({
+		                userId: userId.toString(),
+		                chatId: chatId,
+		                threadId: threadId,
+		                bindTime: new Date().toISOString()
+		            })
+		        );
+		        
+		        return await ctx.reply(
+		            `${msgs.TgBindSuccessMsg}\n`
+		            + `${msgs.TgAddressMsg} ${address}\n`
+		            + `📍 话题 ID: ${threadId}\n`
+		            + `✅ 新邮件将推送到此话题`
+		        );
+		    }
+		    catch (e) {
+		        return await ctx.reply(`${msgs.TgBindFailedMsg} ${(e as Error).message}`);
+		    }
+		});
 
-			bot.command("bindtopic", async (ctx: TgContext) => {
-			    const msgs = await getTgMessages(c, ctx);
-			    const userId = ctx?.message?.from?.id;
-			    const chatId = ctx?.message?.chat?.id;
-			    
-			    // 自动获取话题 ID
-			    const threadId = ctx?.message?.message_thread_id;
-			    
-			    if (!userId) {
-			        return await ctx.reply(msgs.TgUnableGetUserInfoMsg);
-			    }
-			    
-			    try {
-			        const jwt = ctx?.message?.text.slice("/bind".length).trim();
-			        if (!jwt) {
-			            return await ctx.reply(msgs.TgPleaseInputCredentialMsg);
-			        }
-			        
-			        const address = await bindTelegramAddress(c, userId.toString(), jwt, msgs);
-			        
-			        // 保存绑定信息,包含话题 ID
-			        await c.env.KV.put(
-			            `${CONSTANTS.TG_KV_PREFIX}:${address}`,
-			            JSON.stringify({
-			                userId: userId.toString(),
-			                chatId: chatId,
-			                threadId: threadId || null, // 自动保存话题 ID
-			                bindTime: new Date().toISOString()
-			            })
-			        );
-			        
-			        return await ctx.reply(
-			            `${msgs.TgBindSuccessMsg}\n`
-			            + `${msgs.TgAddressMsg} ${address}\n`
-			            + (threadId ? `话题 ID: ${threadId}` : '私聊模式')
-			        );
-			    }
-			    catch (e) {
-			        return await ctx.reply(`${msgs.TgBindFailedMsg} ${(e as Error).message}`);
-			    }
-			});
 	
     const queryMail = async (ctx: TgContext, queryAddress: string, mailIndex: number, edit: boolean) => {
         const msgs = await getTgMessages(c, ctx);
