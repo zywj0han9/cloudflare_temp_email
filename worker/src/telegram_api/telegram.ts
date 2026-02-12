@@ -69,6 +69,10 @@ const COMMANDS = [
         command: "lang",
         description: "设置语言 /lang <zh|en> | Set language /lang <zh|en>"
     },
+	  {
+			  command: "bindtopic",
+			  description: "绑定话题 /bindtopic"
+		},
 ]
 
 export const getTelegramCommands = (c: Context<HonoCustomType>) => {
@@ -276,6 +280,48 @@ export function newTelegramBot(c: Context<HonoCustomType>, token: string): Teleg
             + `/lang zh - 中文\n`
             + `/lang en - English`
         );
+
+			bot.command("bindtopic", async (ctx: TgContext) => {
+			    const msgs = await getTgMessages(c, ctx);
+			    const userId = ctx?.message?.from?.id;
+			    const chatId = ctx?.message?.chat?.id;
+			    
+			    // 自动获取话题 ID
+			    const threadId = ctx?.message?.message_thread_id;
+			    
+			    if (!userId) {
+			        return await ctx.reply(msgs.TgUnableGetUserInfoMsg);
+			    }
+			    
+			    try {
+			        const jwt = ctx?.message?.text.slice("/bind".length).trim();
+			        if (!jwt) {
+			            return await ctx.reply(msgs.TgPleaseInputCredentialMsg);
+			        }
+			        
+			        const address = await bindTelegramAddress(c, userId.toString(), jwt, msgs);
+			        
+			        // 保存绑定信息,包含话题 ID
+			        await c.env.KV.put(
+			            `${CONSTANTS.TG_KV_PREFIX}:${address}`,
+			            JSON.stringify({
+			                userId: userId.toString(),
+			                chatId: chatId,
+			                threadId: threadId || null, // 自动保存话题 ID
+			                bindTime: new Date().toISOString()
+			            })
+			        );
+			        
+			        return await ctx.reply(
+			            `${msgs.TgBindSuccessMsg}\n`
+			            + `${msgs.TgAddressMsg} ${address}\n`
+			            + (threadId ? `话题 ID: ${threadId}` : '私聊模式')
+			        );
+			    }
+			    catch (e) {
+			        return await ctx.reply(`${msgs.TgBindFailedMsg} ${(e as Error).message}`);
+			    }
+			});
     });
 
     const queryMail = async (ctx: TgContext, queryAddress: string, mailIndex: number, edit: boolean) => {
