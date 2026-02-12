@@ -69,10 +69,6 @@ const COMMANDS = [
         command: "lang",
         description: "设置语言 /lang <zh|en> | Set language /lang <zh|en>"
     },
-	  {
-			  command: "bindtopic",
-			  description: "绑定话题 /bindtopic"
-		},
 ]
 
 export const getTelegramCommands = (c: Context<HonoCustomType>) => {
@@ -89,44 +85,31 @@ export function newTelegramBot(c: Context<HonoCustomType>, token: string): Teleg
     }
 
     bot.use(async (ctx, next) => {
-		    const isPrivate = ctx.chat?.type === "private";
-		    const isSupergroup = ctx.chat?.type === "supergroup";
-		    const isGroup = ctx.chat?.type === "group";
-		    
-		    // 获取命令名称
-		    const messageText = ctx?.message?.text || "";
-		    const command = messageText.split(" ")[0].toLowerCase();
-		    
-		    // 允许在话题中使用的命令列表
-		    const topicAllowedCommands = ["/bindtopic"];
-		    
-		    // 如果不是私聊,检查是否是允许的命令
-		    if (!isPrivate) {
-		        if (!topicAllowedCommands.includes(command)) {
-		            return; // 其他命令在群组/话题中不响应
-		        }
-		    }
-		
-		    const userId = ctx?.message?.from?.id || ctx.callbackQuery?.message?.chat?.id;
-		    if (!userId) {
-		        const msgs = await getTgMessages(c, ctx);
-		        return await ctx.reply(msgs.TgUnableGetUserInfoMsg);
-		    }
-		
-		    const settings = await c.env.KV.get<TelegramSettings>(CONSTANTS.TG_KV_SETTINGS_KEY, "json");
-		    if (settings?.enableAllowList
-		        && !settings.allowList.includes(userId.toString())
-		    ) {
-		        const msgs = await getTgMessages(c, ctx);
-		        return await ctx.reply(msgs.TgNoPermissionMsg);
-		    }
-		    try {
-		        await next();
-		    } catch (error) {
-		        console.error(`Error: ${error}`);
-		        return await ctx.reply(`Error: ${error}`);
-		    }
-		})
+        // check if in private chat
+        if (ctx.chat?.type !== "private") {
+            return;
+        }
+
+        const userId = ctx?.message?.from?.id || ctx.callbackQuery?.message?.chat?.id;
+        if (!userId) {
+            const msgs = await getTgMessages(c, ctx);
+            return await ctx.reply(msgs.TgUnableGetUserInfoMsg);
+        }
+
+        const settings = await c.env.KV.get<TelegramSettings>(CONSTANTS.TG_KV_SETTINGS_KEY, "json");
+        if (settings?.enableAllowList
+            && !settings.allowList.includes(userId.toString())
+        ) {
+            const msgs = await getTgMessages(c, ctx);
+            return await ctx.reply(msgs.TgNoPermissionMsg);
+        }
+        try {
+            await next();
+        } catch (error) {
+            console.error(`Error: ${error}`);
+            return await ctx.reply(`Error: ${error}`);
+        }
+    })
 
     bot.command("start", async (ctx: TgContext) => {
         const msgs = await getTgMessages(c, ctx);
@@ -294,55 +277,7 @@ export function newTelegramBot(c: Context<HonoCustomType>, token: string): Teleg
             + `/lang en - English`
         );
     });
-		bot.command("bindtopic", async (ctx: TgContext) => {
-		    const msgs = await getTgMessages(c, ctx);
-		    const userId = ctx?.message?.from?.id;
-		    const chatId = ctx?.message?.chat?.id;
-		    const threadId = ctx?.message?.message_thread_id;
-		    
-		    if (!userId) {
-		        return await ctx.reply(msgs.TgUnableGetUserInfoMsg);
-		    }
-		    
-		    // 检查是否在话题中
-		    if (!threadId) {
-		        return await ctx.reply("⚠️ 请在超级群组的话题中使用此命令!");
-		    }
-		    
-		    try {
-		        // 修复:应该是 "/bindtopic" 不是 "/bind"
-		        const jwt = ctx?.message?.text.slice("/bindtopic".length).trim();
-		        
-		        if (!jwt) {
-		            return await ctx.reply(msgs.TgPleaseInputCredentialMsg + "\n\n使用方法: /bindtopic <邮箱凭证>");
-		        }
-		        
-		        const address = await bindTelegramAddress(c, userId.toString(), jwt, msgs);
-		        
-		        // 保存绑定信息到 address 键(用于接收邮件)
-		        await c.env.KV.put(
-		            `${CONSTANTS.TG_KV_PREFIX}:${address}`,
-		            JSON.stringify({
-		                userId: userId.toString(),
-		                chatId: chatId,
-		                threadId: threadId,
-		                bindTime: new Date().toISOString()
-		            })
-		        );
-		        
-		        return await ctx.reply(
-		            `${msgs.TgBindSuccessMsg}\n`
-		            + `${msgs.TgAddressMsg} ${address}\n`
-		            + `📍 话题 ID: ${threadId}\n`
-		            + `✅ 新邮件将推送到此话题`
-		        );
-		    }
-		    catch (e) {
-		        return await ctx.reply(`${msgs.TgBindFailedMsg} ${(e as Error).message}`);
-		    }
-		});
 
-	
     const queryMail = async (ctx: TgContext, queryAddress: string, mailIndex: number, edit: boolean) => {
         const msgs = await getTgMessages(c, ctx);
         const userId = ctx?.message?.from?.id || ctx.callbackQuery?.message?.chat?.id;
@@ -466,39 +401,29 @@ const parseMail = async (
     }
 }
 
+
 export async function sendMailToTelegram(
-    c: Context<HonoCustomType>, 
-    address: string,
+    c: Context<HonoCustomType>, address: string,
     parsedEmailContext: ParsedEmailContext,
     message_id: string | null
 ) {
     if (!c.env.TELEGRAM_BOT_TOKEN || !c.env.KV) {
         return;
     }
-    
-    // 获取绑定信息(可能是字符串 userId 或 JSON 对象)
-    const bindInfoStr = await c.env.KV.get(`${CONSTANTS.TG_KV_PREFIX}:${address}`);
+    const userId = await c.env.KV.get(`${CONSTANTS.TG_KV_PREFIX}:${address}`);
     const settings = await c.env.KV.get<TelegramSettings>(CONSTANTS.TG_KV_SETTINGS_KEY, "json");
     const globalPush = settings?.enableGlobalMailPush && settings?.globalMailPushList;
-    
-    if (!bindInfoStr && !globalPush) {
+    if (!userId && !globalPush) {
         return;
     }
-    
     const mailId = await c.env.DB.prepare(
         `SELECT id FROM raw_mails where address = ? and message_id = ?`
     ).bind(address, message_id).first<string>("id");
     const bot = newTelegramBot(c, c.env.TELEGRAM_BOT_TOKEN);
 
-    const buildAndSend = async (
-        targetUserId: string, 
-        msgs: LocaleMessages,
-        targetChatId?: number,
-        targetThreadId?: number
-    ) => {
+    const buildAndSend = async (targetUserId: string, msgs: LocaleMessages) => {
         const { mail } = await parseMail(msgs, parsedEmailContext, address, new Date().toUTCString());
         if (!mail) return;
-        
         const buttons = [];
         if (settings?.miniAppUrl && mailId) {
             const url = new URL(settings.miniAppUrl);
@@ -506,19 +431,9 @@ export async function sendMailToTelegram(
             url.searchParams.set("mail_id", mailId);
             buttons.push(Markup.button.webApp(msgs.TgViewMailBtnMsg, url.toString()));
         }
-        
-        // 发送到指定聊天或用户
-        const sendTo = targetChatId || targetUserId;
-        const options: any = {
+        await bot.telegram.sendMessage(targetUserId, mail, {
             ...Markup.inlineKeyboard([...buttons])
-        };
-        
-        // 如果有话题 ID,添加到选项中
-        if (targetThreadId) {
-            options.message_thread_id = targetThreadId;
-        }
-        
-        await bot.telegram.sendMessage(sendTo, mail, options);
+        });
     };
 
     if (globalPush) {
@@ -528,25 +443,8 @@ export async function sendMailToTelegram(
         }
     }
 
-    if (bindInfoStr) {
-        // 尝试解析为 JSON,如果失败则视为旧格式(纯字符串 userId)
-        let bindInfo: any;
-        try {
-            bindInfo = JSON.parse(bindInfoStr);
-        } catch {
-            // 旧格式:纯字符串 userId
-            bindInfo = { userId: bindInfoStr };
-        }
-        
-        const userId = bindInfo.userId || bindInfoStr;
+    if (userId) {
         const userMsgs = await getTgMessages(c, undefined, userId);
-        
-        await buildAndSend(
-            userId,
-            userMsgs,
-            bindInfo.chatId,
-            bindInfo.threadId
-        );
+        await buildAndSend(userId, userMsgs);
     }
-}
 }
