@@ -33,7 +33,7 @@
 | `DEFAULT_DOMAINS`                     | JSON      | 默认用户可用的域名(未登录或未分配角色的用户)                                                                                      | `["awsl.uk", "dreamhunter2333.xyz"]`      |
 | `CREATE_ADDRESS_DEFAULT_DOMAIN_FIRST` | 文本/JSON | 创建新地址时是否优先使用默认域名，如果设置为 true，当未指定域名时将使用第一个域名, 主要用于 telegram bot 场景                     | `false`                                   |
 | `DOMAIN_LABELS`                       | JSON      | 对于中文域名，可以使用 DOMAIN_LABELS 显示域名的中文展示名称                                                                       | `["中文.awsl.uk", "dreamhunter2333.xyz"]` |
-| `ENABLE_AUTO_REPLY`                   | 文本/JSON | 允许自动回复邮件                                                                                                                  | `true`                                    |
+| `ENABLE_AUTO_REPLY`                   | 文本/JSON | 允许自动回复邮件。发件人过滤（`source_prefix`）支持三种模式：留空匹配所有发件人、填写前缀进行 `startsWith` 匹配、使用 `/regex/` 语法进行正则匹配（如 `/@example\.com$/`） | `true`                                    |
 | `DEFAULT_SEND_BALANCE`                | 文本/JSON | 默认发送邮件余额，如果不设置，将为 0                                                                                              | `1`                                       |
 | `ENABLE_ADDRESS_PASSWORD`             | 文本/JSON | 启用邮箱地址密码功能，启用后创建新地址时会自动生成密码，并支持密码登录和修改                                                      | `true`                                    |
 
@@ -100,8 +100,10 @@
 | `COPYRIGHT`                | 文本        | 自定义前端界面页脚文本，支持 html                | `Dream Hunter`        |
 | `ADMIN_CONTACT`            | 文本        | admin 联系方式，可配置任意字符串, 不配置则不显示 | `xxx@gmail.com`       |
 | `DISABLE_SHOW_GITHUB`      | 文本/JSON   | 是否显示 GitHub 链接                             | `true`                |
-| `CF_TURNSTILE_SITE_KEY`    | 文本/Secret | Turnstile 人机验证配置                           | `xxx`                 |
-| `CF_TURNSTILE_SECRET_KEY`  | 文本/Secret | Turnstile 人机验证配置                           | `xxx`                 |
+| `STATUS_URL`               | 文本        | 状态监控页面 URL，配置后显示 Status 菜单按钮     | `https://status.example.com` |
+| `CF_TURNSTILE_SITE_KEY`    | 文本/Secret | Turnstile 人机验证配置（用于新建邮箱、注册验证码等） | `xxx`                 |
+| `CF_TURNSTILE_SECRET_KEY`  | 文本/Secret | Turnstile 人机验证配置（用于新建邮箱、注册验证码等） | `xxx`                 |
+| `ENABLE_GLOBAL_TURNSTILE_CHECK` | 文本/JSON | 启用全局登录表单的 Turnstile 人机验证（管理员登录、用户登录、邮箱密码登录），需同时配置上述 Turnstile 密钥 | `true` |
 
 ## Telegram Bot 相关变量
 
@@ -110,6 +112,7 @@
 | `TG_MAX_ADDRESS`    | 数字      | telegram bot 最多绑定邮箱数量                                          | `5`   |
 | `TG_BOT_INFO`       | 文本      | 可不配置，telegram BOT_INFO，预定义的 BOT_INFO 可以降低 webhook 的延迟 | `{}`  |
 | `TG_ALLOW_USER_LANG`| 文本/JSON | 是否允许用户通过 `/lang` 命令切换语言，默认 `false`                    | `true`|
+| `ENABLE_TG_PUSH_ATTACHMENT`| 布尔值 | 是否启用 Telegram 推送邮件附件，默认 `false`，单文件限制 50MB           | `true`|
 
 > [!NOTE]
 > Telegram 功能需要解析邮件，免费版 CPU 有限，可能会导致大邮件解析超时

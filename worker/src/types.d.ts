@@ -47,6 +47,7 @@ type Bindings = {
     NO_LIMIT_SEND_ROLE: string | undefined | null
     ADMIN_CONTACT: string | undefined
     COPYRIGHT: string | undefined
+    STATUS_URL: string | undefined
     DISABLE_SHOW_GITHUB: string | boolean | undefined
     FORWARD_ADDRESS_LIST: string | string[] | undefined
 
@@ -85,6 +86,7 @@ type Bindings = {
     TG_MAX_ADDRESS: number | undefined
     TG_BOT_INFO: string | object | undefined
     TG_ALLOW_USER_LANG: string | boolean | undefined
+    ENABLE_TG_PUSH_ATTACHMENT: string | boolean | undefined
 
     // webhook config
     FRONTEND_URL: string | undefined
@@ -92,6 +94,9 @@ type Bindings = {
     // AI extraction config
     ENABLE_AI_EMAIL_EXTRACT: string | boolean | undefined
     AI_EXTRACT_MODEL: string | undefined
+
+    // E2E testing
+    E2E_TEST_MODE: string | boolean | undefined
 }
 
 type JwtPayload = {
@@ -131,6 +136,13 @@ type RPCEmailMessage = {
     headers: object | undefined | null,
 }
 
+type ParsedEmailAttachment = {
+    filename: string,
+    mimeType: string,
+    content: Uint8Array,
+    disposition: string,
+}
+
 type ParsedEmailContext = {
     rawEmail: string,
     parsedEmail?: {
@@ -138,7 +150,8 @@ type ParsedEmailContext = {
         subject: string,
         text: string,
         html: string,
-        headers?: Record<string, string>[]
+        headers?: Record<string, string>[],
+        attachments?: ParsedEmailAttachment[],
     } | undefined
 }
 

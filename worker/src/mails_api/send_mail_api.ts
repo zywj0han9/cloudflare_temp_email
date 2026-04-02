@@ -8,12 +8,12 @@ import i18n from '../i18n';
 import { CONSTANTS } from '../constants'
 import { getJsonSetting, getDomains, getIntValue, getBooleanValue, getStringValue, getJsonObjectValue, getSplitStringListValue } from '../utils';
 import { GeoData } from '../models'
-import { handleListQuery } from '../common'
+import { handleListQuery, updateAddressUpdatedAt } from '../common'
 
 
 export const api = new Hono<HonoCustomType>()
 
-api.post('/api/requset_send_mail_access', async (c) => {
+api.post('/api/request_send_mail_access', async (c) => {
     const msgs = i18n.getMessagesbyContext(c);
     const { address } = c.get("jwtPayload")
     if (!address) {
@@ -222,6 +222,8 @@ export const sendMail = async (
             console.warn(`Failed to update balance for ${address}`);
         }
     }
+    // update address updated_at
+    updateAddressUpdatedAt(c, address);
     // save to sendbox
     try {
         const reqIp = c.req.raw.headers.get("cf-connecting-ip")

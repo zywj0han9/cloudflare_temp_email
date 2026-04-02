@@ -168,7 +168,7 @@ export const newAddress = async (
         enableCheckNameRegex?: boolean,
         sourceMeta?: string | undefined | null,
     }
-): Promise<{ address: string, jwt: string, password?: string | null }> => {
+): Promise<{ address: string, jwt: string, password?: string | null, address_id: number }> => {
     const msgs = i18n.getMessagesbyContext(c);
     // trim whitespace and remove special characters
     name = name.trim().replace(getNameRegex(c), '')
@@ -247,6 +247,10 @@ export const newAddress = async (
         `SELECT id FROM address where name = ?`
     ).bind(name).first<number>("id");
 
+    if (!address_id) {
+        throw new Error(msgs.FailedCreateAddressMsg);
+    }
+
     // 如果启用地址密码功能，自动生成密码
     const generatedPassword = await generatePasswordForAddress(c, name);
 
@@ -259,6 +263,7 @@ export const newAddress = async (
         jwt: jwt,
         address: name,
         password: generatedPassword,
+        address_id: address_id,
     }
 }
 
@@ -456,7 +461,8 @@ export const commonParseMail = async (parsedEmailContext: ParsedEmailContext): P
     subject: string,
     text: string,
     html: string,
-    headers?: Record<string, string>[]
+    headers?: Record<string, string>[],
+    attachments?: ParsedEmailAttachment[],
 } | undefined> => {
     // check parsed email context is valid
     if (!parsedEmailContext || !parsedEmailContext.rawEmail) {
@@ -467,7 +473,7 @@ export const commonParseMail = async (parsedEmailContext: ParsedEmailContext): P
         return parsedEmailContext.parsedEmail;
     }
     const raw_mail = parsedEmailContext.rawEmail;
-    // TODO: WASM parse email
+    // NOTE: WASM parse email
     // try {
     //     const { parse_message_wrapper } = await import('mail-parser-wasm-worker');
 
@@ -480,6 +486,12 @@ export const commonParseMail = async (parsedEmailContext: ParsedEmailContext): P
     //             (header) => ({ key: header.key, value: header.value })
     //         ) || [],
     //         html: parsedEmail.body_html || "",
+    //         attachments: (parsedEmail.attachments || []).map(att => ({
+    //             filename: att.filename || "attachment",
+    //             mimeType: att.content_type || "application/octet-stream",
+    //             content: att.content,
+    //             disposition: "attachment",
+    //         })),
     //     };
     //     return parsedEmailContext.parsedEmail;
     // } catch (e) {
@@ -494,6 +506,12 @@ export const commonParseMail = async (parsedEmailContext: ParsedEmailContext): P
             text: parsedEmail.text || "",
             html: parsedEmail.html || "",
             headers: parsedEmail.headers || [],
+            attachments: (parsedEmail.attachments || []).map(att => ({
+                filename: att.filename || "attachment",
+                mimeType: att.mimeType || "application/octet-stream",
+                content: new Uint8Array(att.content),
+                disposition: att.disposition || "attachment",
+            })),
         };
         return parsedEmailContext.parsedEmail;
     }
@@ -605,7 +623,7 @@ export async function triggerWebhook(
         subject: parsedEmail?.subject || "",
         raw: parsedEmailContext.rawEmail || "",
         parsedText: parsedEmail?.text || "",
-        parsedHtml: parsedEmail?.html || ""
+        parsedHtml: parsedEmail?.html || "",
     }
     for (const settings of webhookList) {
         const res = await sendWebhook(settings, webhookMail);

@@ -92,6 +92,8 @@ const getOpenSettings = async (message, notification) => {
             enableWebhook: res["enableWebhook"] || false,
             isS3Enabled: res["isS3Enabled"] || false,
             enableAddressPassword: res["enableAddressPassword"] || false,
+            statusUrl: res["statusUrl"] || "",
+            enableGlobalTurnstileCheck: res["enableGlobalTurnstileCheck"] || false,
         });
         if (openSettings.value.needAuth) {
             showAuth.value = true;

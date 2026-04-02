@@ -1,5 +1,19 @@
 # Create New Email Address API
 
+::: warning Note: Address JWT vs User JWT
+This page describes **Address JWT**, which is different from **User JWT**:
+
+- **Address JWT**: Returned when creating a mailbox via `/api/new_address` or `/admin/new_address`
+  - Use `Authorization: Bearer <jwt>` header
+  - Access `/api/*` endpoints (view mails, delete mails, etc.)
+
+- **User JWT**: Obtained via `/user_api/login` or `/user_api/register`
+  - Use `x-user-token: <jwt>` header
+  - Access `/user_api/*` endpoints (user account management)
+
+**Do not confuse these two JWT types!**
+:::
+
 ## Create Email Address via Admin API
 
 This is a `python` example using the `requests` library to send emails.
@@ -16,6 +30,7 @@ res = requests.post(
     },
     headers={
         'x-admin-auth': "<your_website_admin_password>",
+        # "x-custom-auth": "<your_website_password>", # If private site password is enabled
         "Content-Type": "application/json"
     }
 )
@@ -59,6 +74,7 @@ def fetch_email_data(name):
             },
             headers={
                 'x-admin-auth': "<your_website_admin_password>",
+                # "x-custom-auth": "<your_website_password>", # If private site password is enabled
                 "Content-Type": "application/json"
             }
         )

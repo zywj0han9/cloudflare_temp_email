@@ -1,5 +1,19 @@
 # 新建邮箱地址 API
 
+::: warning 注意：地址 JWT vs 用户 JWT
+本页面介绍的是**地址 JWT**，与**用户 JWT** 是两种不同的认证方式：
+
+- **地址 JWT**：通过 `/api/new_address` 或 `/admin/new_address` 创建邮箱时返回
+  - 使用 `Authorization: Bearer <jwt>` header
+  - 用于访问 `/api/*` 接口（查看邮件、删除邮件等）
+
+- **用户 JWT**：通过 `/user_api/login` 或 `/user_api/register` 获得
+  - 使用 `x-user-token: <jwt>` header
+  - 用于访问 `/user_api/*` 接口（用户账户管理）
+
+**请勿混淆两种 JWT 的使用方式！**
+:::
+
 ## 通过 admin API 新建邮箱地址
 
 这是一个 `python` 的例子，使用 `requests` 库发送邮件。
@@ -16,6 +30,7 @@ res = requests.post(
     },
     headers={
         'x-admin-auth': "<你的网站admin密码>",
+        # "x-custom-auth": "<你的网站密码>", # 如果启用了私有站点密码
         "Content-Type": "application/json"
     }
 )
@@ -59,6 +74,7 @@ def fetch_email_data(name):
             },
             headers={
                 'x-admin-auth': "<你的网站admin密码>",
+                # "x-custom-auth": "<你的网站密码>", # 如果启用了私有站点密码
                 "Content-Type": "application/json"
             }
         )
