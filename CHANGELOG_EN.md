@@ -10,7 +10,12 @@
 
 ### Features
 
+- feat: |Admin| Add **IP Whitelist (strict mode)** to IP blacklist settings: when enabled, ONLY whitelisted IPs can access rate-limited APIs (create address, send mail, external send mail, user register, verify code); all other IPs are denied (#920)
+- feat: |Address| Support setting max address count to `0` for unlimited (#968)
+
 ### Bug Fixes
+
+- fix: |Admin| Fix `D1_ERROR: LIKE or GLOB pattern too complex` on `/admin/address` and `/admin/users` when searching by full email address (query length pushes the LIKE pattern over D1's 50-byte limit). Long queries now fall back to `instr()` to bypass the LIKE pattern length cap (#956)
 
 ### Improvements
 
@@ -20,6 +25,10 @@
 - docs: |Admin API| Add `address_id` field to `/admin/new_address` response documentation (#912)
 - docs: |Admin| Add account list sorting feature documentation (#918)
 - docs: |Pages Deployment| Add SPA mode instructions to avoid 404 when refreshing or accessing sub-paths directly (#813)
+- docs: |Sidebar| Restructure documentation sidebar into "Core Configuration", "Notifications & Integrations", "Advanced Features", "Admin Console" groups
+- docs: |FAQ| Significantly expand FAQ with SPA 404, send balance, SMTP_CONFIG, mail client login and more (#919, #925, #839, #715, #921, #609)
+- docs: |Email Sending| Enhance SMTP_CONFIG field reference and multi-domain examples, add send balance mechanism documentation
+- docs: |Email Routing| Note that subdomains require Email Routing to be enabled separately; enabling it only on the apex domain does not cover subdomains (#969)
 
 ## v1.5.0(main)
 
