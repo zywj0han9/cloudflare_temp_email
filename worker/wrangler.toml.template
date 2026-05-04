@@ -81,12 +81,21 @@ ENABLE_AUTO_REPLY = false
 # ENABLE_WEBHOOK = true
 # Enable address password feature, if set true, will generate password for new address and support password login and change
 # ENABLE_ADDRESS_PASSWORD = false
+# Show AI Agent mailbox connection info in the address credential modal
+# ENABLE_AGENT_EMAIL_INFO = true
+# Show SMTP/IMAP client connection info in the address credential modal
+# SMTP_IMAP_PROXY_CONFIG = """
+# {
+#   "smtp": { "host": "smtp.example.com", "port": 8025, "starttls": true },
+#   "imap": { "host": "imap.example.com", "port": 11143, "starttls": true }
+# }
+# """
 # Footer text
 # COPYRIGHT = "Dream Hunter"
 # DISABLE_SHOW_GITHUB = true
 # Status monitoring page URL
 # STATUS_URL = "https://status.example.com"
-# default send balance, if not set, it will be 0
+# default send balance, auto initialized when users open settings or send mail; if not set, it will be 0
 # DEFAULT_SEND_BALANCE = 1
 # the role which can send emails without limit, multiple roles can be separated by ,
 # NO_LIMIT_SEND_ROLE = "vip"
